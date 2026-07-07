@@ -1,0 +1,40 @@
+{
+  "name": "besnovatyj/yii2-cms-jodit",
+  "version": "1.0.0",
+  "description": "Редактор Jodit для Yii2 (собранный dist + виджет) со встроенной интеграцией файлового менеджера besnovatyj/filemanager-core.",
+  "type": "yii2-extension",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Besnovatyj",
+      "email": "your-email@example.com"
+    }
+  ],
+  "minimum-stability": "stable",
+  "extra": {
+    "bescms": {
+      "kind": "package"
+    }
+  },
+  "keywords": ["yii2", "jodit", "editor", "wysiwyg", "widget", "filemanager", "cms"],
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": {
+      "yiisoft/yii2-composer": true
+    },
+    "fxp-asset": {
+      "enabled": false
+    }
+  },
+  "require": {
+    "php": ">=8.4",
+    "yiisoft/yii2": "~2.0.0",
+    "yiisoft/yii2-bootstrap5": "~2.0.0",
+    "besnovatyj/yii2-cms-helpers": "^1.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Besnovatyj\\Jodit\\": "src/"
+    }
+  }
+}

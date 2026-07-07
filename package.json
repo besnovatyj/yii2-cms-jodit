@@ -1,0 +1,27 @@
+{
+  "name": "@besnovatyj/yii2-cms-jodit-build",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Сборка виджета Jodit для Yii2: jodit + интеграция файлового менеджера (@besnovatyj/filemanager-core) → dist/jodit-widget.(js|css).",
+  "scripts": {
+    "build": "node esbuild.js",
+    "type-check": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@besnovatyj/filemanager-core": "^1.0.3",
+    "jodit": "^4.2.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">= 23.3.0",
+    "npm": ">= 10.0.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.0": true
+  }
+}
