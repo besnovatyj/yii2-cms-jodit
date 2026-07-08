@@ -1,6 +1,5 @@
 {
   "name": "besnovatyj/yii2-cms-jodit",
-  "version": "1.0.0",
   "description": "Редактор Jodit для Yii2 (собранный dist + виджет) со встроенной интеграцией файлового менеджера besnovatyj/filemanager-core.",
   "type": "yii2-extension",
   "license": "MIT",
