@@ -44,6 +44,9 @@ final class JoditEditorAdapter implements EditorAdapterInterface
         if ($options->enableFileManager !== null) {
             $config['enableFileManager'] = $options->enableFileManager;
         }
+        if ($options->enableSnippets !== null) {
+            $config['enableSnippets'] = $options->enableSnippets;
+        }
 
         return $config;
     }

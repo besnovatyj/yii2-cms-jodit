@@ -13,7 +13,23 @@
 
 import {createSnippetPicker} from '@besnovatyj/snippets-core';
 import type {SnippetPickerRuntime} from '@besnovatyj/snippets-core';
+import {Jodit} from 'jodit';
 import type {IJodit, IControlType} from 'jodit';
+
+/**
+ * Иконка кнопки. Регистрируем собственную SVG под именем `snippets`, а НЕ ссылаемся на
+ * встроенное имя (напр. 'paste'): не всякое встроенное имя присутствует в загруженном наборе
+ * иконок — тогда кнопка рендерится пустой (без видимой и кликабельной области). Своя иконка
+ * гарантирует, что кнопка всегда видна и по ней можно кликнуть.
+ */
+const SNIPPETS_ICON =
+    '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+    '<path d="M9 4h9a2 2 0 0 1 2 2v9" stroke="currentColor" stroke-width="2" ' +
+    'stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<rect x="4" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/>' +
+    '</svg>';
+
+Jodit.modules.Icon.set('snippets', SNIPPETS_ICON);
 
 /**
  * Конфиг сниппетов, приходящий из PHP-виджета (editor.options.snippets).
@@ -66,8 +82,8 @@ export function createSnippetsControl(sn: SnippetsConfig): IControlType<IJodit> 
 
     return {
         name: 'snippets',
-        // Встроенная иконка Jodit.
-        icon: 'paste',
+        // Своя зарегистрированная иконка (см. Icon.set выше) — не встроенное имя Jodit.
+        icon: 'snippets',
         tooltip: 'Сниппеты',
         exec: (editor: IJodit): void => {
             open(editor).catch((err: unknown) => {
