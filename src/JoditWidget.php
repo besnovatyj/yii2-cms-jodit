@@ -58,20 +58,85 @@ class JoditWidget extends InputWidget
     public string $uploadUrl = '';
 
     /**
-     * Список кнопок тулбара Jodit. Имя 'fileManager' — наша кастомная кнопка
-     * (регистрируется JS-бандлом; при $enableFileManager === false вырезается).
+     * Полный набор кнопок Jodit (все зарегистрированные плагинами группы) плюс наша
+     * кастомная кнопка 'fileManager' после медиа-группы.
+     *
+     * Зеркалит дефолт Jodit ({@see Config::buttons}, config.js): группа
+     * `{group: '<name>', buttons: []}` разворачивается в ВСЕ кнопки этой группы, поэтому
+     * список самодостаточно «полный» и не устаревает при добавлении плагинов. Служит
+     * дефолтом для всех четырёх адаптивных тулбаров (см. свойства $buttons* ниже).
+     *
      * @see https://xdsoft.net/jodit/docs/options.html#buttons
      */
-    public array $buttons = [
-        'source', '|',
-        'bold', 'italic', 'underline', 'strikethrough', '|',
-        'ul', 'ol', '|',
-        'paragraph', 'fontsize', 'brush', '|',
-        'link', 'image', 'fileManager', 'table', 'hr', '|',
-        'align', 'indent', 'outdent', '|',
-        'undo', 'redo', '|',
-        'eraser', 'fullsize',
+    private const array DEFAULT_BUTTONS = [
+        ['group' => 'font-style', 'buttons' => []],
+        ['group' => 'list', 'buttons' => []],
+        ['group' => 'font', 'buttons' => []],
+        '---',
+        ['group' => 'script', 'buttons' => []],
+        ['group' => 'media', 'buttons' => []],
+        'fileManager',
+        "\n",
+        ['group' => 'state', 'buttons' => []],
+        ['group' => 'clipboard', 'buttons' => []],
+        ['group' => 'insert', 'buttons' => []],
+        ['group' => 'indent', 'buttons' => []],
+        ['group' => 'color', 'buttons' => []],
+        ['group' => 'form', 'buttons' => []],
+        '---',
+        ['group' => 'history', 'buttons' => []],
+        ['group' => 'search', 'buttons' => []],
+        ['group' => 'source', 'buttons' => []],
+        ['group' => 'other', 'buttons' => []],
+        ['group' => 'info', 'buttons' => []],
     ];
+
+    /**
+     * Основной тулбар — используется при ширине области ≥ {@see $sizeLG}.
+     *
+     * Элемент — имя кнопки/сепаратора ('|', '---', "\n") или группа
+     * `['group' => '<name>', 'buttons' => [...]]` (пустой 'buttons' = все кнопки группы).
+     * 'fileManager' — наша кастомная кнопка (регистрируется JS-бандлом; при
+     * $enableFileManager === false рекурсивно вырезается из всех тулбаров).
+     * @see https://xdsoft.net/jodit/docs/options.html#buttons
+     */
+    public array $buttons = self::DEFAULT_BUTTONS;
+
+    /**
+     * Тулбар для средних областей (ширина ≥ {@see $sizeMD}). null — наследует {@see $buttons}.
+     * По умолчанию (null) во всех размерах показываются все кнопки; задайте свой список,
+     * если для узких мест нужен усечённый набор (в духе дефолтных buttonsMD Jodit с 'dots').
+     */
+    public ?array $buttonsMD = null;
+
+    /** Тулбар для малых областей (ширина ≥ {@see $sizeSM}). null — наследует {@see $buttons}. */
+    public ?array $buttonsSM = null;
+
+    /** Тулбар для очень узких областей (ширина < {@see $sizeSM}). null — наследует {@see $buttons}. */
+    public ?array $buttonsXS = null;
+
+    /**
+     * Адаптивный тулбар: Jodit переключает наборы $buttons/$buttonsMD/$buttonsSM/$buttonsXS
+     * по ширине области редактирования. false — всегда используется только {@see $buttons}.
+     */
+    public bool $toolbarAdaptive = true;
+
+    /** Порог (px) для $buttons. null — дефолт Jodit (900). */
+    public ?int $sizeLG = null;
+
+    /** Порог (px) для $buttonsMD. null — дефолт Jodit (700). */
+    public ?int $sizeMD = null;
+
+    /** Порог (px) для $buttonsSM. null — дефолт Jodit (400). */
+    public ?int $sizeSM = null;
+
+    /**
+     * Кнопки, безусловно убираемые из ЛЮБОГО тулбара (Jodit `removeButtons`).
+     * Удобно точечно выключить лишнее из полного набора, не переписывая список целиком
+     * (например ['ai-commands', 'ai-assistant', 'print'] — убрать AI-кнопки и печать).
+     * @see https://xdsoft.net/jodit/docs/options.html#removeButtons
+     */
+    public array $removeButtons = [];
 
     /**
      * Пользовательские переопределения конфига Jodit.
@@ -122,14 +187,30 @@ JS;
             'language' => $this->language,
             'height' => $this->height,
             'placeholder' => $this->placeholder,
-            'buttons' => $this->getButtons(),
-            'toolbarAdaptive' => true,
+            // Все четыре адаптивных тулбара. Незаданные (null) наследуют $buttons, поэтому
+            // по умолчанию на любой ширине показывается полный набор кнопок.
+            'buttons' => $this->resolveToolbar($this->buttons),
+            'buttonsMD' => $this->resolveToolbar($this->buttonsMD),
+            'buttonsSM' => $this->resolveToolbar($this->buttonsSM),
+            'buttonsXS' => $this->resolveToolbar($this->buttonsXS),
+            'toolbarAdaptive' => $this->toolbarAdaptive,
             // Очистка вставки: диалог для контента из Word, режем чужие стили (дефолты ядра).
             'askBeforePasteHTML' => true,
             'askBeforePasteFromWord' => true,
             'defaultActionOnPaste' => 'insert_as_html',
             'defaultActionOnPasteFromWord' => 'insert_as_html',
         ];
+
+        // Брейкпоинты тулбара — только если заданы явно (иначе действуют дефолты Jodit).
+        foreach (['sizeLG' => $this->sizeLG, 'sizeMD' => $this->sizeMD, 'sizeSM' => $this->sizeSM] as $key => $value) {
+            if ($value !== null) {
+                $config[$key] = $value;
+            }
+        }
+
+        if ($this->removeButtons !== []) {
+            $config['removeButtons'] = $this->removeButtons;
+        }
 
         if ($this->uploadUrl !== '') {
             $config['uploader'] = [
@@ -152,18 +233,48 @@ JS;
     }
 
     /**
-     * Список кнопок с учётом флага файлового менеджера.
+     * Готовит один тулбар: подставляет {@see $buttons} вместо null (наследование) и,
+     * если файловый менеджер выключен, вырезает кнопку 'fileManager' на всех уровнях.
+     *
+     * @param array<int, mixed>|null $buttons тулбар из свойства виджета
+     * @return array<int, mixed>
      */
-    protected function getButtons(): array
+    protected function resolveToolbar(?array $buttons): array
     {
-        if ($this->enableFileManager) {
-            return $this->buttons;
+        $buttons ??= $this->buttons;
+
+        return $this->enableFileManager
+            ? $buttons
+            : $this->stripControl($buttons, 'fileManager');
+    }
+
+    /**
+     * Рекурсивно убирает кнопку $name из тулбара, включая вложенные группы
+     * (`['group' => ..., 'buttons' => [...]]`).
+     *
+     * @param array<int, mixed> $buttons
+     * @return array<int, mixed>
+     */
+    private function stripControl(array $buttons, string $name): array
+    {
+        $result = [];
+
+        foreach ($buttons as $item) {
+            if (is_string($item)) {
+                if ($item !== $name) {
+                    $result[] = $item;
+                }
+                continue;
+            }
+
+            if (is_array($item) && isset($item['buttons']) && is_array($item['buttons'])) {
+                $item['buttons'] = $this->stripControl($item['buttons'], $name);
+            }
+
+            $result[] = $item;
         }
 
-        return array_values(array_filter(
-            $this->buttons,
-            static fn(string $button): bool => $button !== 'fileManager',
-        ));
+        return array_values($result);
     }
 
     /**
