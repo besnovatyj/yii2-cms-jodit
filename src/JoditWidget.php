@@ -19,12 +19,13 @@ use yii\helpers\Url;
  *
  * @see https://xdsoft.net/jodit/
  *
- * Сборка самодостаточна: dist/jodit-widget.js (jodit + интеграция файлового менеджера)
- * и dist/jodit-widget.css. Виджет публикует их через {@see JoditAsset}, рендерит
- * <textarea> и инициализирует редактор ES-модулем, вызывая экспорт createEditor().
+ * Сборка самодостаточна: dist/jodit-widget.js (jodit + интеграции файлового менеджера и
+ * пикера сниппетов) и dist/jodit-widget.css. Виджет публикует их через {@see JoditAsset},
+ * рендерит <textarea> и инициализирует редактор ES-модулем, вызывая экспорт createEditor().
  *
- * Файловый менеджер (besnovatyj/filemanager-core) уже встроен в бандл: при
- * {@see $enableFileManager} === true в тулбаре появляется кнопка `fileManager`.
+ * Файловый менеджер (besnovatyj/filemanager-core) и пикер сниппетов (besnovatyj/snippets-core)
+ * уже встроены в бандл: при {@see $enableFileManager}/{@see $enableSnippets} === true в тулбаре
+ * появляются кнопки `fileManager` и `snippets`.
  */
 class JoditWidget extends InputWidget
 {
@@ -48,6 +49,15 @@ class JoditWidget extends InputWidget
 
     /** Базовый URL опубликованных ресурсов файлового менеджера (иконки типов и т.п.). */
     public string $fmBaseUrl = '';
+
+    /** Включать ли кнопку пикера сниппетов (модуль besnovatyj/yii2-cms-snippets). */
+    public bool $enableSnippets = true;
+
+    /**
+     * URL эндпоинта дерева сниппетов (backend API).
+     * Пусто — берётся дефолтный роут модуля сниппетов {@see getSnippetsApiUrl()}.
+     */
+    public string $snippetsUrl = '';
 
     /**
      * URL коннектора загрузки картинок (drag&drop / вставка).
@@ -110,6 +120,7 @@ class JoditWidget extends InputWidget
             'table', // 'group' => 'insert'
             'hr', // 'group' => 'insert'
             'link', // 'group' => 'insert'
+            'snippets', // наша кастомная кнопка (регистрируется JS-бандлом)
             // 'symbols', // 'group' => 'insert'
         ]],
 
@@ -178,6 +189,7 @@ class JoditWidget extends InputWidget
             'table', // 'group' => 'insert'
             'hr', // 'group' => 'insert'
             'link', // 'group' => 'insert'
+            'snippets', // наша кастомная кнопка (регистрируется JS-бандлом)
         ]],
 
         ['group' => 'indent', 'buttons' => []], // 'indent', 'outdent', 'left'
@@ -220,6 +232,7 @@ class JoditWidget extends InputWidget
             'table', // 'group' => 'insert'
             'hr', // 'group' => 'insert'
             'link', // 'group' => 'insert'
+            'snippets', // наша кастомная кнопка (регистрируется JS-бандлом)
         ]],
 
         ['group' => 'indent', 'buttons' => []], // 'indent', 'outdent', 'left'
@@ -382,12 +395,20 @@ JS;
             ];
         }
 
+        if ($this->enableSnippets) {
+            $config['snippets'] = [
+                'snippetsUrl' => $this->getSnippetsApiUrl(),
+                'snippetsHeaders' => $this->getHeaders(),
+                'snippetsTitle' => 'Сниппеты',
+            ];
+        }
+
         return $config;
     }
 
     /**
-     * Готовит один тулбар: подставляет {@see $buttons} вместо null (наследование) и,
-     * если файловый менеджер выключен, вырезает кнопку 'fileManager' на всех уровнях.
+     * Готовит один тулбар: подставляет {@see $buttons} вместо null (наследование) и вырезает
+     * на всех уровнях кастомные кнопки, чьи интеграции выключены ('fileManager', 'snippets').
      *
      * @param array<int, mixed>|null $buttons тулбар из свойства виджета
      * @return array<int, mixed>
@@ -396,9 +417,15 @@ JS;
     {
         $buttons ??= $this->buttons;
 
-        return $this->enableFileManager
-            ? $buttons
-            : $this->stripControl($buttons, 'fileManager');
+        if (!$this->enableFileManager) {
+            $buttons = $this->stripControl($buttons, 'fileManager');
+        }
+
+        if (!$this->enableSnippets) {
+            $buttons = $this->stripControl($buttons, 'snippets');
+        }
+
+        return $buttons;
     }
 
     /**
@@ -447,5 +474,13 @@ JS;
     public function getFmApiUrl(): string
     {
         return $this->fmConnectionUrl ?: Url::to('/File/backend/file-manager');
+    }
+
+    /**
+     * URL эндпоинта дерева сниппетов (backend API модуля besnovatyj/yii2-cms-snippets).
+     */
+    public function getSnippetsApiUrl(): string
+    {
+        return $this->snippetsUrl ?: Url::to('/Snippets/backend/api/tree');
     }
 }

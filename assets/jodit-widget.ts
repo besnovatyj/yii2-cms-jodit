@@ -25,11 +25,15 @@ import 'jodit/es2021/jodit.fat.min.css';
 
 import {createFileManagerControl} from './plugins/fileManager';
 import type {FileManagerConfig} from './plugins/fileManager';
+import {createSnippetsControl} from './plugins/snippets';
+import type {SnippetsConfig} from './plugins/snippets';
 
-/** Опции Jodit (частичный Config) + наш блок fileManager. */
+/** Опции Jodit (частичный Config) + наши блоки fileManager и snippets. */
 export type JoditWidgetConfig = Record<string, unknown> & {
     /** Конфиг файлового менеджера. Если нет fmConnector — кнопка не регистрируется. */
     fileManager?: FileManagerConfig | null;
+    /** Конфиг сниппетов. Если нет snippetsUrl — кнопка не регистрируется. */
+    snippets?: SnippetsConfig | null;
 };
 
 /** Реестр созданных редакторов для отладки/доступа снаружи. */
@@ -43,7 +47,7 @@ declare global {
  * Создаёт редактор Jodit на элементе по CSS-селектору.
  *
  * @param selector селектор целевого <textarea> (например, '#page-content')
- * @param config   опции Jodit + блок fileManager
+ * @param config   опции Jodit + блоки fileManager/snippets
  * @returns экземпляр редактора или null, если элемент не найден
  */
 export function createEditor(
@@ -56,19 +60,25 @@ export function createEditor(
         return null;
     }
 
-    // Отделяем наш блок fileManager от «чистых» опций Jodit.
-    const {fileManager, ...options} = config;
+    // Отделяем наши блоки fileManager/snippets от «чистых» опций Jodit.
+    const {fileManager, snippets, ...options} = config;
     const joditOptions: Record<string, unknown> = {...options};
 
-    // Регистрируем кнопку файлового менеджера как control — размещение задаёт
-    // список buttons из PHP (там имя 'fileManager' уже стоит на нужной позиции).
+    // Регистрируем кнопки-контролы. Их размещение задаёт список buttons из PHP
+    // (имена 'fileManager'/'snippets' уже стоят на нужных позициях).
+    const controls: Record<string, unknown> =
+        (joditOptions.controls as Record<string, unknown>) ?? {};
+
     if (fileManager?.fmConnector) {
-        const existingControls =
-            (joditOptions.controls as Record<string, unknown>) ?? {};
-        joditOptions.controls = {
-            ...existingControls,
-            fileManager: createFileManagerControl(fileManager),
-        };
+        controls.fileManager = createFileManagerControl(fileManager);
+    }
+
+    if (snippets?.snippetsUrl) {
+        controls.snippets = createSnippetsControl(snippets);
+    }
+
+    if (Object.keys(controls).length > 0) {
+        joditOptions.controls = controls;
     }
 
     // Jodit синхронизирует контент обратно в исходный <textarea>,
