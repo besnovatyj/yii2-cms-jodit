@@ -69,26 +69,64 @@ class JoditWidget extends InputWidget
      * @see https://xdsoft.net/jodit/docs/options.html#buttons
      */
     private const array DEFAULT_BUTTONS = [
-        ['group' => 'font-style', 'buttons' => []],
-        ['group' => 'list', 'buttons' => []],
-        ['group' => 'font', 'buttons' => []],
-        '---',
-        ['group' => 'script', 'buttons' => []],
-        ['group' => 'media', 'buttons' => []],
-        'fileManager',
-        "\n",
-        ['group' => 'state', 'buttons' => []],
-        ['group' => 'clipboard', 'buttons' => []],
-        ['group' => 'insert', 'buttons' => []],
-        ['group' => 'indent', 'buttons' => []],
-        ['group' => 'color', 'buttons' => []],
-        ['group' => 'form', 'buttons' => []],
-        '---',
-        ['group' => 'history', 'buttons' => []],
-        ['group' => 'search', 'buttons' => []],
-        ['group' => 'source', 'buttons' => []],
-        ['group' => 'other', 'buttons' => []],
-        ['group' => 'info', 'buttons' => []],
+
+        ['group' => 'c_source_other_history', 'buttons' => [
+            'source', // 'group' => 'source'
+            'fullsize', // 'group' => 'other'
+            // 'preview', // 'group' => 'other'
+            // 'print', // 'group' => 'other'
+            'undo', // 'group' => 'history'
+            'redo', // 'group' => 'history'
+        ]],
+
+        ['group' => 'c_font-style', 'buttons' => [
+            'bold', // 'group' => 'font-style'
+            'italic', // 'group' => 'font-style'
+            'underline', // 'group' => 'font-style'
+            // 'strikethrough', // 'group' => 'font-style'
+            'eraser', // 'group' => 'font-style'
+        ]],
+
+        ['group' => 'c_list', 'buttons' => [
+            'ul', // 'group' => 'list'
+            'ol', // 'group' => 'list'
+        ]],
+
+        ['group' => 'c_font', 'buttons' => [
+            // 'font', // 'group' => 'font'
+            // 'fontsize', // 'group' => 'font'
+            'paragraph', // 'group' => 'font'
+            // 'lineHeight', // 'group' => 'font'
+        ]],
+
+        ['group' => 'c_media', 'buttons' => [
+            // 'image', // 'group' => 'media'
+            // 'file', // 'group' => 'media'
+            'fileManager', // 'group' => 'media'
+            'video', // 'group' => 'media'
+        ]],
+
+        ['group' => 'c_insert', 'buttons' => [
+            'table', // 'group' => 'insert'
+            'hr', // 'group' => 'insert'
+            'link', // 'group' => 'insert'
+            // 'symbols', // 'group' => 'insert'
+        ]],
+
+        ['group' => 'indent', 'buttons' => []], // 'indent', 'outdent', 'left'
+
+        // '|', // разделитель групп
+        // "\n", - Перенос на следующую строку
+        //'---', // Отодвигает следующую группу в конец строки
+
+        ['group' => 'color', 'buttons' => []],  // 'brush'
+        ['group' => 'state', 'buttons' => []],  // 'spellcheck'
+        ['group' => 'search', 'buttons' => []], // 'find'
+        ['group' => 'info', 'buttons' => []],   // 'about'
+
+        // ['group' => 'script', 'buttons' => []], // 'superscript', 'subscript', 'classSpan'
+        // ['group' => 'clipboard', 'buttons' => []], // 'cut', 'copy', 'paste', 'selectall', 'copyformat'
+
     ];
 
     /**
@@ -107,13 +145,125 @@ class JoditWidget extends InputWidget
      * По умолчанию (null) во всех размерах показываются все кнопки; задайте свой список,
      * если для узких мест нужен усечённый набор (в духе дефолтных buttonsMD Jodit с 'dots').
      */
-    public ?array $buttonsMD = null;
+    public ?array $buttonsMD = [
+
+        ['group' => 'c_source_other_history', 'buttons' => [
+            'fullsize', // 'group' => 'other'
+            'undo', // 'group' => 'history'
+            'redo', // 'group' => 'history'
+        ]],
+
+        ['group' => 'c_font-style', 'buttons' => [
+            'bold', // 'group' => 'font-style'
+            'italic', // 'group' => 'font-style'
+            'underline', // 'group' => 'font-style'
+            'eraser', // 'group' => 'font-style'
+        ]],
+
+        ['group' => 'c_list', 'buttons' => [
+            'ul', // 'group' => 'list'
+            'ol', // 'group' => 'list'
+        ]],
+
+        ['group' => 'c_font', 'buttons' => [
+            'paragraph', // 'group' => 'font'
+        ]],
+
+        ['group' => 'c_media', 'buttons' => [
+            'fileManager', // 'group' => 'media'
+            'video', // 'group' => 'media'
+        ]],
+
+        ['group' => 'c_insert', 'buttons' => [
+            'table', // 'group' => 'insert'
+            'hr', // 'group' => 'insert'
+            'link', // 'group' => 'insert'
+        ]],
+
+        ['group' => 'indent', 'buttons' => []], // 'indent', 'outdent', 'left'
+
+        '---', // Отодвигает следующую группу в конец строки
+        'dots',
+    ];
 
     /** Тулбар для малых областей (ширина ≥ {@see $sizeSM}). null — наследует {@see $buttons}. */
-    public ?array $buttonsSM = null;
+    public ?array $buttonsSM = [
+
+        ['group' => 'c_source_other_history', 'buttons' => [
+            'fullsize', // 'group' => 'other'
+            'undo', // 'group' => 'history'
+            'redo', // 'group' => 'history'
+        ]],
+
+        ['group' => 'c_font-style', 'buttons' => [
+            'bold', // 'group' => 'font-style'
+            'italic', // 'group' => 'font-style'
+            'underline', // 'group' => 'font-style'
+            'eraser', // 'group' => 'font-style'
+        ]],
+
+        ['group' => 'c_list', 'buttons' => [
+            'ul', // 'group' => 'list'
+            'ol', // 'group' => 'list'
+        ]],
+
+        ['group' => 'c_font', 'buttons' => [
+            'paragraph', // 'group' => 'font'
+        ]],
+
+        ['group' => 'c_media', 'buttons' => [
+            'fileManager', // 'group' => 'media'
+            'video', // 'group' => 'media'
+        ]],
+
+        ['group' => 'c_insert', 'buttons' => [
+            'table', // 'group' => 'insert'
+            'hr', // 'group' => 'insert'
+            'link', // 'group' => 'insert'
+        ]],
+
+        ['group' => 'indent', 'buttons' => []], // 'indent', 'outdent', 'left'
+
+        '---', // Отодвигает следующую группу в конец строки
+
+        'dots',
+    ];
 
     /** Тулбар для очень узких областей (ширина < {@see $sizeSM}). null — наследует {@see $buttons}. */
-    public ?array $buttonsXS = null;
+    public ?array $buttonsXS = [
+
+        ['group' => 'c_source_other_history', 'buttons' => [
+            'fullsize', // 'group' => 'other'
+            'undo', // 'group' => 'history'
+            'redo', // 'group' => 'history'
+        ]],
+
+        ['group' => 'c_font-style', 'buttons' => [
+            'bold', // 'group' => 'font-style'
+            'italic', // 'group' => 'font-style'
+            'underline', // 'group' => 'font-style'
+            'paragraph', // 'group' => 'font'
+            'eraser', // 'group' => 'font-style'
+        ]],
+
+        ['group' => 'c_list', 'buttons' => [
+            'ul', // 'group' => 'list'
+            'ol', // 'group' => 'list'
+        ]],
+
+        ['group' => 'c_media', 'buttons' => [
+            'fileManager', // 'group' => 'media'
+        ]],
+
+        ['group' => 'c_insert', 'buttons' => [
+            'hr', // 'group' => 'insert'
+            'link', // 'group' => 'insert'
+        ]],
+
+        '---', // Отодвигает следующую группу в конец строки
+
+        'dots',
+    ];
 
     /**
      * Адаптивный тулбар: Jodit переключает наборы $buttons/$buttonsMD/$buttonsSM/$buttonsXS
@@ -136,7 +286,10 @@ class JoditWidget extends InputWidget
      * (например ['ai-commands', 'ai-assistant', 'print'] — убрать AI-кнопки и печать).
      * @see https://xdsoft.net/jodit/docs/options.html#removeButtons
      */
-    public array $removeButtons = [];
+    public array $removeButtons = [
+        'ai-assistant',
+        'ai-commands',
+    ];
 
     /**
      * Пользовательские переопределения конфига Jodit.
