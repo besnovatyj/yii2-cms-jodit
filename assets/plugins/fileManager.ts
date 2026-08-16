@@ -22,7 +22,7 @@ import type {
     FileEntity,
     IFileManagerBackend,
 } from '@besnovatyj/filemanager-core';
-import type {IJodit, IControlType} from 'jodit';
+import type {JoditControl, JoditEditor} from '../jodit-types';
 
 /**
  * Конфиг файлового менеджера, который приходит из PHP-виджета
@@ -46,10 +46,10 @@ export interface FileManagerConfig {
  * @param fm нормализованный конфиг файлового менеджера
  * @returns описание кнопки для Jodit (options.controls.fileManager)
  */
-export function createFileManagerControl(fm: FileManagerConfig): IControlType<IJodit> {
+export function createFileManagerControl(fm: FileManagerConfig): JoditControl {
     let runtime: AppRuntime | null = null;
 
-    const open = async (editor: IJodit): Promise<void> => {
+    const open = async (editor: JoditEditor): Promise<void> => {
         // Уже открыт — второй раз не создаём.
         if (runtime) {
             return;
@@ -91,7 +91,7 @@ export function createFileManagerControl(fm: FileManagerConfig): IControlType<IJ
         // Встроенная иконка Jodit.
         icon: 'image',
         tooltip: 'Файловый менеджер',
-        exec: (editor: IJodit): void => {
+        exec: (editor: JoditEditor): void => {
             open(editor).catch((err: unknown) => {
                 // Логируем и гасим рантайм, чтобы кнопка не «залипла».
                 console.error('[Jodit FileManager] не удалось открыть:', err);
@@ -106,7 +106,7 @@ export function createFileManagerControl(fm: FileManagerConfig): IControlType<IJ
  * Вставка выбранных файлов в контент Jodit.
  * Картинки — как <img>, остальное — как ссылка. Поддерживается мультивыбор.
  */
-function insertFiles(editor: IJodit, files: FileEntity[]): void {
+function insertFiles(editor: JoditEditor, files: FileEntity[]): void {
     if (!files?.length) {
         return;
     }

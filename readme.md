@@ -10,6 +10,8 @@ CKEditor 5 — с нативным редактированием HTML-исхо�
 ```
 assets/jodit-widget.ts          # entry: Jodit + CSS + регистрация кнопки ФМ, экспорт createEditor()
 assets/plugins/fileManager.ts   # интеграция @besnovatyj/filemanager-core (кнопка, вставка файлов)
+assets/plugins/snippets.ts      # интеграция @besnovatyj/snippets-core (кнопка, вставка HTML сниппета)
+assets/plugins/shortcodes.ts    # пикер шорткодов (кнопка, вставка примера; своё окно, без npm-ядра)
 esbuild.js                      # сборка одной entry; jodit и ядро ФМ бандлятся внутрь
 tsconfig.json                   # strict TS (только проверка типов; сборка — esbuild)
 src/JoditWidget.php             # Yii2 InputWidget
@@ -96,6 +98,21 @@ use Besnovatyj\Jodit\JoditWidget;
 остальное — как ссылка. Конфиг коннектора/заголовков/пути задаёт PHP-виджет
 (`getFmApiUrl()`, `getHeaders()`, `fmDefaultPath`). Логика — в `assets/plugins/fileManager.ts`,
 полный аналог CKEditor-адаптера `@besnovatyj/ckeditor5-filemanager`.
+
+## Шорткоды
+
+Кнопка `shortcodes` (при `enableShortcodes = true`) открывает список шорткодов с поиском и
+фильтром по типу; клик по строке вставляет **пример вставки** в позицию курсора — текстовым
+узлом, а не через `insertHTML`, чтобы редактор не интерпретировал разметку шорткода.
+
+Список приходит из модуля `besnovatyj/yii2-cms-shortcode`
+(`/Shortcode/backend/api/list`, переопределяется свойством `shortcodesUrl`) и кэшируется на
+время жизни страницы. Жёсткой зависимости от модуля нет: не отвечает эндпоинт — кнопка
+сообщает об ошибке, редактор работает дальше; не нужен вовсе — `enableShortcodes = false`,
+и кнопка вырезается из всех тулбаров.
+
+В отличие от файлового менеджера и сниппетов, отдельного npm-ядра здесь нет: данные плоские,
+UI — один список, поэтому пикер целиком лежит в `assets/plugins/shortcodes.ts`.
 
 ## Очистка вставки
 

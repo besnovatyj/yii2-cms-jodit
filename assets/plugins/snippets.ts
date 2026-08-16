@@ -14,7 +14,7 @@
 import {createSnippetPicker} from '@besnovatyj/snippets-core';
 import type {SnippetPickerRuntime} from '@besnovatyj/snippets-core';
 import {Jodit} from 'jodit';
-import type {IJodit, IControlType} from 'jodit';
+import type {JoditControl, JoditEditor} from '../jodit-types';
 
 /**
  * Иконка кнопки. Регистрируем собственную SVG под именем `snippets`, а НЕ ссылаемся на
@@ -51,10 +51,10 @@ export interface SnippetsConfig {
  * @param sn нормализованный конфиг сниппетов
  * @returns описание кнопки для Jodit (options.controls.snippets)
  */
-export function createSnippetsControl(sn: SnippetsConfig): IControlType<IJodit> {
+export function createSnippetsControl(sn: SnippetsConfig): JoditControl {
     let runtime: SnippetPickerRuntime | null = null;
 
-    const open = async (editor: IJodit): Promise<void> => {
+    const open = async (editor: JoditEditor): Promise<void> => {
         // Уже открыт — второй раз не создаём.
         if (runtime) {
             return;
@@ -85,7 +85,7 @@ export function createSnippetsControl(sn: SnippetsConfig): IControlType<IJodit> 
         // Своя зарегистрированная иконка (см. Icon.set выше) — не встроенное имя Jodit.
         icon: 'snippets',
         tooltip: 'Сниппеты',
-        exec: (editor: IJodit): void => {
+        exec: (editor: JoditEditor): void => {
             open(editor).catch((err: unknown) => {
                 // Логируем и гасим рантайм, чтобы кнопка не «залипла».
                 console.error('[Jodit Snippets] не удалось открыть:', err);

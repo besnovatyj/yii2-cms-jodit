@@ -19,13 +19,15 @@ use yii\helpers\Url;
  *
  * @see https://xdsoft.net/jodit/
  *
- * Сборка самодостаточна: dist/jodit-widget.js (jodit + интеграции файлового менеджера и
- * пикера сниппетов) и dist/jodit-widget.css. Виджет публикует их через {@see JoditAsset},
- * рендерит <textarea> и инициализирует редактор ES-модулем, вызывая экспорт createEditor().
+ * Сборка самодостаточна: dist/jodit-widget.js (jodit + интеграции файлового менеджера,
+ * пикера сниппетов и пикера шорткодов) и dist/jodit-widget.css. Виджет публикует их через
+ * {@see JoditAsset}, рендерит <textarea> и инициализирует редактор ES-модулем, вызывая
+ * экспорт createEditor().
  *
- * Файловый менеджер (besnovatyj/filemanager-core) и пикер сниппетов (besnovatyj/snippets-core)
- * уже встроены в бандл: при {@see $enableFileManager}/{@see $enableSnippets} === true в тулбаре
- * появляются кнопки `fileManager` и `snippets`.
+ * Файловый менеджер (besnovatyj/filemanager-core), пикер сниппетов (besnovatyj/snippets-core) и
+ * пикер шорткодов уже встроены в бандл: при {@see $enableFileManager}/{@see $enableSnippets}/
+ * {@see $enableShortcodes} === true в тулбаре появляются кнопки `fileManager`, `snippets`
+ * и `shortcodes`.
  */
 class JoditWidget extends InputWidget
 {
@@ -58,6 +60,15 @@ class JoditWidget extends InputWidget
      * Пусто — берётся дефолтный роут модуля сниппетов {@see getSnippetsApiUrl()}.
      */
     public string $snippetsUrl = '';
+
+    /** Включать ли кнопку пикера шорткодов (модуль besnovatyj/yii2-cms-shortcode). */
+    public bool $enableShortcodes = true;
+
+    /**
+     * URL эндпоинта списка шорткодов (backend API).
+     * Пусто — берётся дефолтный роут модуля шорткодов {@see getShortcodesApiUrl()}.
+     */
+    public string $shortcodesUrl = '';
 
     /**
      * URL коннектора загрузки картинок (drag&drop / вставка).
@@ -121,6 +132,7 @@ class JoditWidget extends InputWidget
             'hr', // 'group' => 'insert'
             'link', // 'group' => 'insert'
             'snippets', // наша кастомная кнопка (регистрируется JS-бандлом)
+            'shortcodes', // наша кастомная кнопка (регистрируется JS-бандлом)
             // 'symbols', // 'group' => 'insert'
         ]],
 
@@ -190,6 +202,7 @@ class JoditWidget extends InputWidget
             'hr', // 'group' => 'insert'
             'link', // 'group' => 'insert'
             'snippets', // наша кастомная кнопка (регистрируется JS-бандлом)
+            'shortcodes', // наша кастомная кнопка (регистрируется JS-бандлом)
         ]],
 
         ['group' => 'indent', 'buttons' => []], // 'indent', 'outdent', 'left'
@@ -233,6 +246,7 @@ class JoditWidget extends InputWidget
             'hr', // 'group' => 'insert'
             'link', // 'group' => 'insert'
             'snippets', // наша кастомная кнопка (регистрируется JS-бандлом)
+            'shortcodes', // наша кастомная кнопка (регистрируется JS-бандлом)
         ]],
 
         ['group' => 'indent', 'buttons' => []], // 'indent', 'outdent', 'left'
@@ -403,12 +417,21 @@ JS;
             ];
         }
 
+        if ($this->enableShortcodes) {
+            $config['shortcodes'] = [
+                'shortcodesUrl' => $this->getShortcodesApiUrl(),
+                'shortcodesHeaders' => $this->getHeaders(),
+                'shortcodesTitle' => 'Шорткоды',
+            ];
+        }
+
         return $config;
     }
 
     /**
      * Готовит один тулбар: подставляет {@see $buttons} вместо null (наследование) и вырезает
-     * на всех уровнях кастомные кнопки, чьи интеграции выключены ('fileManager', 'snippets').
+     * на всех уровнях кастомные кнопки, чьи интеграции выключены ('fileManager', 'snippets',
+     * 'shortcodes').
      *
      * @param array<int, mixed>|null $buttons тулбар из свойства виджета
      * @return array<int, mixed>
@@ -423,6 +446,10 @@ JS;
 
         if (!$this->enableSnippets) {
             $buttons = $this->stripControl($buttons, 'snippets');
+        }
+
+        if (!$this->enableShortcodes) {
+            $buttons = $this->stripControl($buttons, 'shortcodes');
         }
 
         return $buttons;
@@ -482,5 +509,13 @@ JS;
     public function getSnippetsApiUrl(): string
     {
         return $this->snippetsUrl ?: Url::to('/Snippets/backend/api/tree');
+    }
+
+    /**
+     * URL эндпоинта списка шорткодов (backend API модуля besnovatyj/yii2-cms-shortcode).
+     */
+    public function getShortcodesApiUrl(): string
+    {
+        return $this->shortcodesUrl ?: Url::to('/Shortcode/backend/api/list');
     }
 }

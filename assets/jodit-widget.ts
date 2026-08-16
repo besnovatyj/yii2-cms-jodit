@@ -11,7 +11,7 @@
  */
 
 import {Jodit} from 'jodit';
-import type {IJodit} from 'jodit';
+import type {JoditEditor} from './jodit-types';
 
 // ВАЖНО: главный вход 'jodit' (esm/index.js) регистрирует лишь УРЕЗАННЫЙ core-набор
 // плагинов — без source (HTML-исходник), resizer (маркеры ресайза картинок), fullsize,
@@ -27,19 +27,23 @@ import {createFileManagerControl} from './plugins/fileManager';
 import type {FileManagerConfig} from './plugins/fileManager';
 import {createSnippetsControl} from './plugins/snippets';
 import type {SnippetsConfig} from './plugins/snippets';
+import {createShortcodesControl} from './plugins/shortcodes';
+import type {ShortcodesConfig} from './plugins/shortcodes';
 
-/** Опции Jodit (частичный Config) + наши блоки fileManager и snippets. */
+/** Опции Jodit (частичный Config) + наши блоки fileManager, snippets и shortcodes. */
 export type JoditWidgetConfig = Record<string, unknown> & {
     /** Конфиг файлового менеджера. Если нет fmConnector — кнопка не регистрируется. */
     fileManager?: FileManagerConfig | null;
     /** Конфиг сниппетов. Если нет snippetsUrl — кнопка не регистрируется. */
     snippets?: SnippetsConfig | null;
+    /** Конфиг шорткодов. Если нет shortcodesUrl — кнопка не регистрируется. */
+    shortcodes?: ShortcodesConfig | null;
 };
 
 /** Реестр созданных редакторов для отладки/доступа снаружи. */
 declare global {
     interface Window {
-        joditEditors?: Record<string, IJodit>;
+        joditEditors?: Record<string, JoditEditor>;
     }
 }
 
@@ -47,25 +51,25 @@ declare global {
  * Создаёт редактор Jodit на элементе по CSS-селектору.
  *
  * @param selector селектор целевого <textarea> (например, '#page-content')
- * @param config   опции Jodit + блоки fileManager/snippets
+ * @param config   опции Jodit + блоки fileManager/snippets/shortcodes
  * @returns экземпляр редактора или null, если элемент не найден
  */
 export function createEditor(
     selector: string,
     config: JoditWidgetConfig = {},
-): IJodit | null {
+): JoditEditor | null {
     const element = document.querySelector<HTMLElement>(selector);
     if (!element) {
         console.error(`[Jodit] элемент не найден: ${selector}`);
         return null;
     }
 
-    // Отделяем наши блоки fileManager/snippets от «чистых» опций Jodit.
-    const {fileManager, snippets, ...options} = config;
+    // Отделяем наши блоки fileManager/snippets/shortcodes от «чистых» опций Jodit.
+    const {fileManager, snippets, shortcodes, ...options} = config;
     const joditOptions: Record<string, unknown> = {...options};
 
     // Регистрируем кнопки-контролы. Их размещение задаёт список buttons из PHP
-    // (имена 'fileManager'/'snippets' уже стоят на нужных позициях).
+    // (имена 'fileManager'/'snippets'/'shortcodes' уже стоят на нужных позициях).
     const controls: Record<string, unknown> =
         (joditOptions.controls as Record<string, unknown>) ?? {};
 
@@ -75,6 +79,10 @@ export function createEditor(
 
     if (snippets?.snippetsUrl) {
         controls.snippets = createSnippetsControl(snippets);
+    }
+
+    if (shortcodes?.shortcodesUrl) {
+        controls.shortcodes = createShortcodesControl(shortcodes);
     }
 
     if (Object.keys(controls).length > 0) {
