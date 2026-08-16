@@ -5,9 +5,7 @@
   "type": "module",
   "description": "Сборка виджета Jodit для Yii2: jodit + интеграция файлового менеджера (@besnovatyj/filemanager-core) и пикера сниппетов (@besnovatyj/snippets-core) → dist/jodit-widget.(js|css).",
   "scripts": {
-    "+": "npm i @besnovatyj/snippets-core@1.0.0",
     "build": "node esbuild.js",
-    "build:local": "SNIPPETS_CORE_LOCAL=1 node esbuild.js",
     "type-check": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

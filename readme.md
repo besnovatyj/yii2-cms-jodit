@@ -26,7 +26,7 @@ package.json                    # @besnovatyj/yii2-cms-jodit-build (сборка
 Node/npm доступны только в контейнере. Из корня пакета:
 
 ```bash
-npm install        # подтянет jodit ^4 и @besnovatyj/filemanager-core ^1.0.x
+npm install        # подтянет jodit ^4 и ядра ФМ/сниппетов из npm
 npm run build      # → dist/jodit-widget.js + dist/jodit-widget.css
 npm run type-check # (опционально) строгая проверка типов через tsc --noEmit
 ```
@@ -34,9 +34,9 @@ npm run type-check # (опционально) строгая проверка т
 `dist/` коммитится в git — composer потребляет его без пересборки (как у остальных
 собранных пакетов CMS).
 
-> **Локальная доработка ядра ФМ:** ядро тянется из npm registry по версии. Для проверки
-> незапубликованной версии — `npm install ../../npm/filemanager-core --no-save`, затем
-> `npm run build`.
+Оба ядра (`@besnovatyj/filemanager-core`, `@besnovatyj/snippets-core`) тянутся из npm registry
+по версии из `package.json`. Никаких локальных подмен и сборок из соседних каталогов сборка
+не делает: что в зависимостях — то и в бандле.
 
 ## Использование
 
