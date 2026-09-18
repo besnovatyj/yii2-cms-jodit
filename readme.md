@@ -9,7 +9,8 @@ CKEditor 5 — с нативным редактированием HTML-исхо�
 
 ```
 assets/jodit-widget.ts          # entry: Jodit + CSS + регистрация кнопки ФМ, экспорт createEditor()
-assets/plugins/fileManager.ts   # интеграция @besnovatyj/filemanager-core (кнопка, вставка файлов)
+assets/plugins/fileManager.ts   # интеграция @besnovatyj/filemanager-core v1 (кнопка fileManager)
+assets/plugins/explorer.ts      # интеграция @besnovatyj/filemanager-core2 — проводник (кнопка explorer, scope-токен)
 assets/plugins/snippets.ts      # интеграция @besnovatyj/snippets-core (кнопка, вставка HTML сниппета)
 assets/plugins/shortcodes.ts    # пикер шорткодов (кнопка, вставка примера; своё окно, без npm-ядра)
 esbuild.js                      # сборка одной entry; jodit и ядро ФМ бандлятся внутрь
@@ -98,6 +99,21 @@ use Besnovatyj\Jodit\JoditWidget;
 остальное — как ссылка. Конфиг коннектора/заголовков/пути задаёт PHP-виджет
 (`getFmApiUrl()`, `getHeaders()`, `fmDefaultPath`). Логика — в `assets/plugins/fileManager.ts`,
 полный аналог CKEditor-адаптера `@besnovatyj/ckeditor5-filemanager`.
+
+## Проводник (файловый менеджер v2)
+
+Кнопка `explorer` (при `enableExplorer = true`, по умолчанию включена) открывает проводник
+`@besnovatyj/filemanager-core2` в режиме выбора с множественным выделением: изображения
+вставляются как `<img>`, остальные файлы — ссылкой с именем файла. Файлы без публичного URL
+(хранилище без отдачи наружу) пропускаются с предупреждением в консоли. Работает параллельно с
+v1-кнопкой `fileManager` под отдельной иконкой, пока v1 не выведен.
+
+Свойства виджета: `explorerStartPath` (по умолчанию = `fmDefaultPath`), `explorerConnector`
+(по умолчанию `/File/backend/api`), `explorerTheme` (`null` — системная, `'light'`/`'dark'`),
+`explorerScoped` (по умолчанию `true`: проводник заперт в `explorerStartPath` — виджет выпускает
+подписанный токен области, сервер отклоняет пути вне неё; `false` — свободная навигация).
+Логика — в `assets/plugins/explorer.ts`. Ядро подключено `file:`-зависимостью на
+`packages/npm/filemanager-core2` — после публикации в npm заменить на версию.
 
 ## Шорткоды
 

@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 namespace Besnovatyj\Jodit;
 
+use Besnovatyj\File\api\scope\ScopeToken;
 use Besnovatyj\Helpers\json\Json;
 use yii\bootstrap5\InputWidget;
 use yii\helpers\ArrayHelper;
@@ -52,8 +53,39 @@ class JoditWidget extends InputWidget
     /** Базовый URL опубликованных ресурсов файлового менеджера (иконки типов и т.п.). */
     public string $fmBaseUrl = '';
 
+    /**
+     * Включать ли кнопку проводника (файловый менеджер v2, besnovatyj/filemanager-core2).
+     * Работает параллельно с {@see $enableFileManager} (v1) под отдельной кнопкой `explorer`.
+     */
+    public bool $enableExplorer = true;
+
+    /** Виртуальный путь, открываемый проводником; null — как {@see $fmDefaultPath}. */
+    public ?string $explorerStartPath = null;
+
+    /** URL API проводника (контракт bescms-fs); пусто — дефолтный маршрут модуля File. */
+    public string $explorerConnector = '';
+
+    /** Тема проводника: null — по системной, 'light' | 'dark'. */
+    public ?string $explorerTheme = null;
+
+    /**
+     * Ограничить проводник областью {@see $explorerStartPath} (по умолчанию — папкой сущности из
+     * {@see $fmDefaultPath}): выше неё не подняться ни в UI, ни через API — виджет выпускает
+     * подписанный токен области ({@see ScopeToken}), сервер отклоняет пути вне неё.
+     * false — свободная навигация по всем хранилищам (как в standalone-менеджере).
+     */
+    public bool $explorerScoped = true;
+
     /** Включать ли кнопку пикера сниппетов (модуль besnovatyj/yii2-cms-snippets). */
     public bool $enableSnippets = true;
+
+    /**
+     * URL API проводника (файловый менеджер v2, контроллёр ApiController модуля File).
+     */
+    public function getExplorerApiUrl(): string
+    {
+        return $this->explorerConnector ?: Url::to('/File/backend/api');
+    }
 
     /**
      * URL эндпоинта дерева сниппетов (backend API).
@@ -124,6 +156,7 @@ class JoditWidget extends InputWidget
             // 'image', // 'group' => 'media'
             // 'file', // 'group' => 'media'
             'fileManager', // 'group' => 'media'
+            'explorer', // наша кастомная кнопка: проводник (ФМ v2)
             'video', // 'group' => 'media'
         ]],
 
@@ -194,6 +227,7 @@ class JoditWidget extends InputWidget
 
         ['group' => 'c_media', 'buttons' => [
             'fileManager', // 'group' => 'media'
+            'explorer', // наша кастомная кнопка: проводник (ФМ v2)
             'video', // 'group' => 'media'
         ]],
 
@@ -238,6 +272,7 @@ class JoditWidget extends InputWidget
 
         ['group' => 'c_media', 'buttons' => [
             'fileManager', // 'group' => 'media'
+            'explorer', // наша кастомная кнопка: проводник (ФМ v2)
             'video', // 'group' => 'media'
         ]],
 
@@ -280,6 +315,7 @@ class JoditWidget extends InputWidget
 
         ['group' => 'c_media', 'buttons' => [
             'fileManager', // 'group' => 'media'
+            'explorer', // наша кастомная кнопка: проводник (ФМ v2)
         ]],
 
         ['group' => 'c_insert', 'buttons' => [
@@ -400,6 +436,23 @@ JS;
             ];
         }
 
+        if ($this->enableExplorer) {
+            $startPath = $this->explorerStartPath ?? $this->fmDefaultPath;
+            $config['explorer'] = [
+                'connector' => $this->getExplorerApiUrl(),
+                'startPath' => $startPath,
+                'headers' => $this->getHeaders(),
+                'title' => 'Проводник',
+                'storageKey' => 'fm2:jodit',
+            ];
+            if ($this->explorerScoped && $startPath !== '/') {
+                $config['explorer']['scope'] = ['root' => $startPath, 'token' => ScopeToken::issue($startPath)];
+            }
+            if ($this->explorerTheme !== null) {
+                $config['explorer']['theme'] = $this->explorerTheme;
+            }
+        }
+
         if ($this->enableFileManager) {
             $config['fileManager'] = [
                 'fmConnector' => $this->getFmApiUrl(),
@@ -430,8 +483,8 @@ JS;
 
     /**
      * Готовит один тулбар: подставляет {@see $buttons} вместо null (наследование) и вырезает
-     * на всех уровнях кастомные кнопки, чьи интеграции выключены ('fileManager', 'snippets',
-     * 'shortcodes').
+     * на всех уровнях кастомные кнопки, чьи интеграции выключены ('fileManager', 'explorer',
+     * 'snippets', 'shortcodes').
      *
      * @param array<int, mixed>|null $buttons тулбар из свойства виджета
      * @return array<int, mixed>
@@ -442,6 +495,10 @@ JS;
 
         if (!$this->enableFileManager) {
             $buttons = $this->stripControl($buttons, 'fileManager');
+        }
+
+        if (!$this->enableExplorer) {
+            $buttons = $this->stripControl($buttons, 'explorer');
         }
 
         if (!$this->enableSnippets) {

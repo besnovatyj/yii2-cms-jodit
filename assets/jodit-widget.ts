@@ -25,6 +25,8 @@ import 'jodit/es2021/jodit.fat.min.css';
 
 import {createFileManagerControl} from './plugins/fileManager';
 import type {FileManagerConfig} from './plugins/fileManager';
+import {createExplorerControl} from './plugins/explorer';
+import type {ExplorerPluginConfig} from './plugins/explorer';
 import {createSnippetsControl} from './plugins/snippets';
 import type {SnippetsConfig} from './plugins/snippets';
 import {createShortcodesControl} from './plugins/shortcodes';
@@ -32,8 +34,10 @@ import type {ShortcodesConfig} from './plugins/shortcodes';
 
 /** Опции Jodit (частичный Config) + наши блоки fileManager, snippets и shortcodes. */
 export type JoditWidgetConfig = Record<string, unknown> & {
-    /** Конфиг файлового менеджера. Если нет fmConnector — кнопка не регистрируется. */
+    /** Конфиг файлового менеджера v1. Если нет fmConnector — кнопка не регистрируется. */
     fileManager?: FileManagerConfig | null;
+    /** Конфиг проводника (ФМ v2). Если нет connector — кнопка не регистрируется. */
+    explorer?: ExplorerPluginConfig | null;
     /** Конфиг сниппетов. Если нет snippetsUrl — кнопка не регистрируется. */
     snippets?: SnippetsConfig | null;
     /** Конфиг шорткодов. Если нет shortcodesUrl — кнопка не регистрируется. */
@@ -65,16 +69,20 @@ export function createEditor(
     }
 
     // Отделяем наши блоки fileManager/snippets/shortcodes от «чистых» опций Jodit.
-    const {fileManager, snippets, shortcodes, ...options} = config;
+    const {fileManager, explorer, snippets, shortcodes, ...options} = config;
     const joditOptions: Record<string, unknown> = {...options};
 
     // Регистрируем кнопки-контролы. Их размещение задаёт список buttons из PHP
-    // (имена 'fileManager'/'snippets'/'shortcodes' уже стоят на нужных позициях).
+    // (имена 'fileManager'/'explorer'/'snippets'/'shortcodes' уже стоят на нужных позициях).
     const controls: Record<string, unknown> =
         (joditOptions.controls as Record<string, unknown>) ?? {};
 
     if (fileManager?.fmConnector) {
         controls.fileManager = createFileManagerControl(fileManager);
+    }
+
+    if (explorer?.connector) {
+        controls.explorer = createExplorerControl(explorer);
     }
 
     if (snippets?.snippetsUrl) {
