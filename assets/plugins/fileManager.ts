@@ -7,8 +7,7 @@
  *
  * Тонкая обёртка: вся доменная логика ФМ живёт в @besnovatyj/filemanager-core,
  * здесь — только связка с Jodit (кнопка тулбара `fileManager`, открытие рантайма ФМ,
- * вставка выбранных файлов в контент редактора). Полный аналог CKEditor-адаптера
- * @besnovatyj/ckeditor5-filemanager, но под API Jodit.
+ * вставка выбранных файлов в контент редактора).
  */
 
 import {
@@ -81,7 +80,7 @@ export function createFileManagerControl(fm: FileManagerConfig): JoditControl {
             },
         };
 
-        // backend добавляется тут же — ровно как в CKEditor-адаптере.
+        // backend добавляется тут же.
         runtime = createApp({...appConfig, backend});
         await runtime.open();
     };

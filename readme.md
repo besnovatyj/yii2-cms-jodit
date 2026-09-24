@@ -1,9 +1,9 @@
 # besnovatyj/yii2-cms-jodit
 
 Редактор **Jodit** для Yii2: собранный dist + виджет со **встроенной интеграцией файлового
-менеджера** [`@besnovatyj/filemanager-core`](../../npm/filemanager-core). Альтернатива
-CKEditor 5 — с нативным редактированием HTML-исходника, очисткой вставки из Word/сайтов и
-плагинной архитектурой (MIT, TypeScript).
+менеджера** [`@besnovatyj/filemanager-core`](../../npm/filemanager-core). Возможности —
+нативное редактирование HTML-исходника, очистка вставки из Word/сайтов и
+плагинная архитектура (MIT, TypeScript).
 
 ## Состав пакета
 
@@ -97,8 +97,7 @@ use Besnovatyj\Jodit\JoditWidget;
 Кнопка `fileManager` (при `enableFileManager = true`) открывает
 `@besnovatyj/filemanager-core`. Выбранные файлы вставляются в контент: картинки — как `<img>`,
 остальное — как ссылка. Конфиг коннектора/заголовков/пути задаёт PHP-виджет
-(`getFmApiUrl()`, `getHeaders()`, `fmDefaultPath`). Логика — в `assets/plugins/fileManager.ts`,
-полный аналог CKEditor-адаптера `@besnovatyj/ckeditor5-filemanager`.
+(`getFmApiUrl()`, `getHeaders()`, `fmDefaultPath`). Логика — в `assets/plugins/fileManager.ts`.
 
 ## Проводник (файловый менеджер v2)
 
@@ -154,8 +153,8 @@ UI — один список, поэтому пикер целиком лежи�
    smoke-тест: собрать, открыть форму, проверить тулбар, вставку из ФМ и сохранение.
 3. **Uploader** (drag&drop / вставка картинок) — по умолчанию выключен (`uploadUrl = ''`),
    вставка идёт через файловый менеджер. Для прямой загрузки нужен коннектор, отвечающий в
-   **формате Jodit** (`{ success, data: { baseurl, files, ... } }`) — это НЕ формат SUA-коннектора
-   CKEditor, отдельная серверная ручка.
+   **формате Jodit** (`{ success, data: { baseurl, files, ... } }`) — отдельная серверная ручка,
+   обязанная пройти `UploadPolicy` файлового модуля.
 4. **CodeMirror как sourceEditor** — Jodit поддерживает замену встроенного редактора исходника
    через `sourceEditor`; порт твоего CodeMirror-плагина — отдельная задача (точка расширения
    готова: передать реализацию в `config`).
