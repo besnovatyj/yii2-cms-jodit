@@ -29,7 +29,7 @@ import {createExplorerControl} from './plugins/explorer';
 import type {ExplorerPluginConfig} from './plugins/explorer';
 import {createSnippetsControl} from './plugins/snippets';
 import type {SnippetsConfig} from './plugins/snippets';
-import {createShortcodesControl} from './plugins/shortcodes';
+import {attachShortcodePreview, createShortcodesControl} from './plugins/shortcodes';
 import type {ShortcodesConfig} from './plugins/shortcodes';
 
 /** Опции Jodit (частичный Config) + наши блоки fileManager, snippets и shortcodes. */
@@ -100,6 +100,11 @@ export function createEditor(
     // Jodit синхронизирует контент обратно в исходный <textarea>,
     // поэтому ActiveForm Yii получает значение без доп. кода.
     const editor = Jodit.make(element, joditOptions);
+
+    // Превью текстовых шорткодов (%staticHost% и т.п.) в WYSIWYG; в значении они остаются.
+    if (shortcodes?.shortcodesUrl) {
+        attachShortcodePreview(editor, shortcodes);
+    }
 
     window.joditEditors = window.joditEditors ?? {};
     window.joditEditors[element.id || selector] = editor;

@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@besnovatyj/filemanager-core": "^1.0.3",
-    "@besnovatyj/filemanager-core2": "file:../../../packages/npm/filemanager-core2",
+    "@besnovatyj/filemanager-core2": "2.0.0-alpha.1",
     "@besnovatyj/snippets-core": "^1.0.0",
     "jodit": "^4.2.0"
   },

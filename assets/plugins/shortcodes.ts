@@ -58,8 +58,24 @@ interface ShortcodeDto {
 /** Тип шорткода в терминах модуля ({@link \Besnovatyj\Shortcode\entities\Shortcode}). */
 const TYPE_WIDGET = 'widget';
 
+/** Текстовый шорткод: в контенте заменяется строкой replacement. */
+const TYPE_TEXT = 'text';
+
 /** Значение фильтра по типу: пустая строка — «все». */
 type TypeFilter = string;
+
+/**
+ * Атрибуты, в которых текстовые шорткоды подменяются на время показа в WYSIWYG.
+ * Только те, от которых зависит отображение (картинка, видео-постер, srcset);
+ * в тексте шорткод остаётся как есть — так его видно и можно править.
+ */
+const PREVIEW_ATTRIBUTES = ['src', 'srcset', 'poster'] as const;
+
+/** Префикс атрибута-метки, хранящего исходное значение с шорткодом. */
+const PREVIEW_MARKER_PREFIX = 'data-jodit-shortcode-';
+
+/** Пары «шорткод → замена» для превью. */
+type TextReplacements = ReadonlyArray<readonly [string, string]>;
 
 /**
  * Кэш ответа на время жизни страницы, общий для всех редакторов: список меняется редко,
@@ -162,6 +178,120 @@ export function createShortcodesControl(sc: ShortcodesConfig): JoditControl {
             });
         },
     };
+}
+
+/**
+ * Превью текстовых шорткодов в WYSIWYG: `<img src="%staticHost%/a.jpg">` показывается
+ * с реальным адресом, а в исходнике, textarea и БД остаётся шорткод.
+ *
+ * Как устроено:
+ * - показ: после каждой записи значения в редактор (`postProcessSetEditorValue` — инициализация,
+ *   возврат из режима исходника, синхронизация после вставки из ФМ) в DOM редактора атрибуты из
+ *   {@link PREVIEW_ATTRIBUTES} с шорткодами получают замену, а исходное значение уходит в метку
+ *   `data-jodit-shortcode-<attr>`;
+ * - чтение: на `afterGetValueFromEditor` (его берут и textarea, и режим исходника) метки снимаются,
+ *   исходное значение возвращается. Если атрибут успели поменять (другая картинка через диалог) —
+ *   новое значение остаётся, устаревшая метка просто удаляется.
+ *
+ * @param editor экземпляр редактора
+ * @param sc     конфиг шорткодов (нужен URL списка)
+ */
+export function attachShortcodePreview(editor: JoditEditor, sc: ShortcodesConfig): void {
+    let replacements: TextReplacements = [];
+
+    editor.e.on('postProcessSetEditorValue', (): void => {
+        decorate(editor.editor, replacements);
+    });
+
+    editor.e.on('afterGetValueFromEditor', (data: {value: string}): void => {
+        data.value = restore(editor.od, data.value, replacements);
+    });
+
+    load(sc)
+        .then((items: ShortcodeDto[]): void => {
+            replacements = items
+                .filter((item) => item.type === TYPE_TEXT && item.shortcode !== '')
+                .map((item) => [item.shortcode, item.replacement] as const);
+
+            // Контент уже в редакторе (список грузится асинхронно) — декорируем его без точки
+            // истории, иначе Ctrl+Z «откатывал» бы картинки к битым адресам.
+            editor.history.snapshot.transaction((): void => {
+                decorate(editor.editor, replacements);
+            });
+            if (editor.history.length === 0) {
+                editor.history.clear();
+            }
+        })
+        .catch((err: unknown): void => {
+            // Без списка редактор работает как раньше, просто без превью.
+            console.warn('[Jodit Shortcodes] превью недоступно:', err);
+        });
+}
+
+/**
+ * Подставляет замены в атрибуты превью и запоминает исходные значения в метках.
+ * Уже декорированные атрибуты не трогает: их значение шорткодов не содержит.
+ */
+function decorate(root: HTMLElement | undefined, replacements: TextReplacements): void {
+    if (!root || replacements.length === 0) {
+        return;
+    }
+
+    for (const attr of PREVIEW_ATTRIBUTES) {
+        for (const element of root.querySelectorAll(`[${attr}*="%"]`)) {
+            const original = element.getAttribute(attr) ?? '';
+            const shown = applyReplacements(original, replacements);
+
+            if (shown !== original) {
+                element.setAttribute(PREVIEW_MARKER_PREFIX + attr, original);
+                element.setAttribute(attr, shown);
+            }
+        }
+    }
+}
+
+/**
+ * Возвращает шорткоды в HTML, отдаваемом наружу, и снимает метки.
+ * Быстрый выход без парсинга, если меток нет, — метод зовётся на каждую синхронизацию.
+ */
+function restore(doc: Document, html: string, replacements: TextReplacements): string {
+    if (!html.includes(PREVIEW_MARKER_PREFIX)) {
+        return html;
+    }
+
+    const template = doc.createElement('template');
+    template.innerHTML = html;
+
+    for (const attr of PREVIEW_ATTRIBUTES) {
+        const marker = PREVIEW_MARKER_PREFIX + attr;
+
+        for (const element of template.content.querySelectorAll(`[${marker}]`)) {
+            const original = element.getAttribute(marker) ?? '';
+            element.removeAttribute(marker);
+
+            // Атрибут не меняли (в нём ровно наше превью) — возвращаем шорткод.
+            // Поменяли (другая картинка через диалог) — оставляем новое значение.
+            if (element.getAttribute(attr) === applyReplacements(original, replacements)) {
+                element.setAttribute(attr, original);
+            }
+        }
+    }
+
+    return template.innerHTML;
+}
+
+/**
+ * Замена всех вхождений каждого шорткода.
+ */
+function applyReplacements(value: string, replacements: TextReplacements): string {
+    let result = value;
+    for (const [shortcode, replacement] of replacements) {
+        if (result.includes(shortcode)) {
+            result = result.split(shortcode).join(replacement);
+        }
+    }
+
+    return result;
 }
 
 /**
@@ -273,7 +403,7 @@ function buildPicker(
         empty.hidden = visible > 0;
     };
 
-    for (const [value, label] of [['', 'Все'], [TYPE_WIDGET, 'Виджеты'], ['text', 'Текстовые']]) {
+    for (const [value, label] of [['', 'Все'], [TYPE_WIDGET, 'Виджеты'], [TYPE_TEXT, 'Текстовые']]) {
         const button = doc.createElement('button');
         button.type = 'button';
         button.textContent = label;
