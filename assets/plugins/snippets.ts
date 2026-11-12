@@ -60,24 +60,47 @@ export function createSnippetsControl(sn: SnippetsConfig): JoditControl {
             return;
         }
 
-        runtime = createSnippetPicker({
-            snippetsUrl: sn.snippetsUrl,
-            headers: sn.snippetsHeaders ?? {},
-            title: sn.snippetsTitle,
+        // Окно пикера забирает фокус: запоминаем актуальное выделение при каждом открытии.
+        editor.selection.save();
+        let selectionRestored = false;
 
-            // Пользователь выбрал сниппет — вставляем HTML в контент.
-            // Закрытие окна выполняет сам рантайм ядра (затем сработает onClose).
-            onSelect: (html: string): void => {
-                editor.selection.insertHTML(html);
-            },
+        const restoreSelection = (): void => {
+            if (selectionRestored) {
+                return;
+            }
 
-            // Окно закрыто (выбор, крестик, Esc, backdrop) — сбрасываем ссылку.
-            onClose: (): void => {
-                runtime = null;
-            },
-        });
+            editor.selection.focus();
+            editor.selection.restore();
+            selectionRestored = true;
+        };
 
-        await runtime.open();
+        try {
+            runtime = createSnippetPicker({
+                snippetsUrl: sn.snippetsUrl,
+                headers: sn.snippetsHeaders ?? {},
+                title: sn.snippetsTitle,
+
+                // Пользователь выбрал сниппет — вставляем HTML в контент.
+                // Закрытие окна выполняет сам рантайм ядра (затем сработает onClose).
+                onSelect: (html: string): void => {
+                    restoreSelection();
+                    editor.selection.insertHTML(html);
+                },
+
+                // Окно закрыто (выбор, крестик, Esc, backdrop) — сбрасываем ссылку.
+                onClose: (): void => {
+                    runtime = null;
+                    restoreSelection();
+                },
+            });
+
+            await runtime.open();
+        } catch (err: unknown) {
+            runtime?.close();
+            runtime = null;
+            restoreSelection();
+            throw err;
+        }
     };
 
     return {
