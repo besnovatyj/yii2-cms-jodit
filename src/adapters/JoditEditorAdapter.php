@@ -48,6 +48,10 @@ final class JoditEditorAdapter implements EditorAdapterInterface
             $config['enableSnippets'] = $options->enableSnippets;
         }
 
+        if ($options->contentStyles !== []) {
+            $config['contentStyles'] = $options->contentStyles;
+        }
+
         return $config;
     }
 }

@@ -32,6 +32,9 @@ use yii\helpers\Url;
  */
 class JoditWidget extends InputWidget
 {
+    /** @var list<string> CSS активной темы для области редактирования. */
+    public array $contentStyles = [];
+
     /** Язык интерфейса редактора (локали Jodit). */
     public string $language = 'ru';
 
@@ -375,6 +378,13 @@ class JoditWidget extends InputWidget
         $baseUrl = $bundle->baseUrl;
 
         $config = ArrayHelper::merge($this->buildConfig(), $this->config);
+        if ($this->contentStyles !== []) {
+            // Явный конфиг формы имеет приоритет, в том числе пустой список CSS.
+            $config += [
+                'iframe' => true,
+                'iframeCSSLinks' => $this->contentStyles,
+            ];
+        }
         $jsonConfig = Json::encode($config, false, ['enableJsonExprFinder' => true]);
 
         $id = $this->options['id'];
