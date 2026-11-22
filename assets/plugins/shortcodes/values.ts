@@ -2,7 +2,7 @@
  * Copyright (c) 2026 Besnovatyj. Licensed under the MIT License.
  */
 
-import type {ShortcodeDto} from './shortcode-data';
+import type {ShortcodeDto} from './catalog';
 
 /** Пары «шорткод → замена» для превью. */
 export type TextReplacements = ReadonlyArray<readonly [string, string]>;
@@ -45,24 +45,27 @@ export function parsePrefix(value: string): UrlPrefix {
     return {origin: url.origin, path: match[3], key: `${url.origin}${match[3]}`};
 }
 
-/**
- * Замена всех вхождений каждого шорткода.
- */
-// Один проход, без раскрытия результата.
-export function applyReplacements(value: string, replacements: TextReplacements): string {
+/** Готовит одношаговую подстановку без повторного раскрытия результата. */
+function compileReplacements(replacements: TextReplacements): (value: string) => string {
     const map = new Map(replacements);
-    if (map.size === 0) return value;
+    if (map.size === 0) return value => value;
     const pattern = new RegExp([...map.keys()].join('|'), 'g');
-    return value.replace(pattern, token => map.get(token) ?? token);
+    return value => value.replace(pattern, token => map.get(token) ?? token);
+}
+
+/** Замена всех вхождений каждого шорткода за один проход. */
+export function applyReplacements(value: string, replacements: TextReplacements): string {
+    return compileReplacements(replacements)(value);
 }
 
 /** Правила отсортированы по длине пути; неоднозначность проверяется при загрузке. */
 export class ShortcodeCodec {
-    readonly replacements: TextReplacements;
+    private readonly expand: (value: string) => string;
     private readonly rules: Array<{shortcode: string; prefix: UrlPrefix}>;
 
     constructor(items: ReadonlyArray<ShortcodeDto>) {
-        this.replacements = items.filter(item => item.type === 'text').map(item => [item.shortcode, item.replacement]);
+        this.expand = compileReplacements(items.filter(item => item.type === 'text')
+            .map(item => [item.shortcode, item.replacement]));
         this.rules = items.filter(item => item.reverse.mode === 'url-prefix')
             .map(item => ({shortcode: item.shortcode, prefix: parsePrefix(item.replacement)}))
             .sort((a, b) => b.prefix.path.length - a.prefix.path.length);
@@ -70,7 +73,7 @@ export class ShortcodeCodec {
 
     /** Создаёт только один токен и оставляет исходный остаток URL без перекодирования. */
     reverse(value: string): string {
-        if (this.replacements.some(([token]) => value.includes(token)) || /[\x00-\x20\x7f\\]/.test(value)) {
+        if (/[\x00-\x20\x7f\\]/.test(value)) {
             return value;
         }
         const match = /^(https?):\/\/([^/?#]+)([^?#]*)([?#].*)?$/i.exec(value);
@@ -109,9 +112,9 @@ export class ShortcodeCodec {
             return;
         }
         for (const attr of ATTRIBUTES) {
-            for (const element of root.querySelectorAll(`[${attr}]`)) {
+            for (const element of root.querySelectorAll(`[${attr}*="%"]`)) {
                 const original = element.getAttribute(attr) ?? '';
-                const shown = applyReplacements(original, this.replacements);
+                const shown = this.expand(original);
                 if (shown !== original) {
                     element.setAttribute(MARKER + attr, original);
                     element.setAttribute(attr, shown);
@@ -143,7 +146,7 @@ export class ShortcodeCodec {
                     changed = true;
                     // Атрибут не меняли (в нём ровно наше превью) — возвращаем шорткод.
                     // Поменяли (другая картинка через диалог) — оставляем новое значение.
-                    if (current === applyReplacements(original, this.replacements)) {
+                    if (current === this.expand(original)) {
                         value = original;
                     }
                 }

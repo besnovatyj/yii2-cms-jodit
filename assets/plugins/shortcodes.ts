@@ -17,9 +17,9 @@
 
 import {Jodit} from 'jodit';
 import type {JoditControl, JoditEditor} from '../jodit-types';
-import type {ShortcodeDto} from './shortcode-data';
-import {loadShortcodes} from './shortcode-data';
-import {attachShortcodeLifecycle} from './shortcode-lifecycle';
+import type {ShortcodeDto} from './shortcodes/catalog';
+import {loadShortcodes} from './shortcodes/catalog';
+import {attachShortcodeIntegration} from './shortcodes/integration';
 
 /**
  * Иконка кнопки. Регистрируем собственную SVG под именем `shortcodes`, а НЕ ссылаемся на
@@ -164,7 +164,7 @@ export function createShortcodesControl(sc: ShortcodesConfig): JoditControl {
  * Как устроено:
  * - показ: после каждой записи значения в редактор (`postProcessSetEditorValue` — инициализация,
  *   возврат из режима исходника, синхронизация после вставки из ФМ) в DOM редактора атрибуты из
- *   {@link PREVIEW_ATTRIBUTES} с шорткодами получают замену, а исходное значение уходит в метку
+ *   src, href, poster и srcset с шорткодами получают замену, а исходное значение уходит в метку
  *   `data-jodit-shortcode-<attr>`;
  * - чтение: на `afterGetValueFromEditor` (его берут и textarea, и режим исходника) метки снимаются,
  *   исходное значение возвращается. Если атрибут успели поменять (другая картинка через диалог) —
@@ -174,7 +174,7 @@ export function createShortcodesControl(sc: ShortcodesConfig): JoditControl {
  * @param sc     конфиг шорткодов (нужен URL списка)
  */
 export function attachShortcodePreview(editor: JoditEditor, sc: ShortcodesConfig): void {
-    attachShortcodeLifecycle(editor, sc);
+    attachShortcodeIntegration(editor, sc);
 }
 
 /** Загрузка списка шорткодов с сервера (с кэшем на время жизни страницы). */

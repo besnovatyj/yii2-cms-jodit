@@ -42,23 +42,56 @@ page.on('pageerror', error => errors.push(error.message));
 const base = `http://127.0.0.1:${server.address().port}`;
 async function boot(config = {}, count = 1) {
     await page.goto(base);
+    if (process.env.YII_VENDOR) {
+        await page.addScriptTag({path: path.join(process.env.YII_VENDOR, 'bower-asset/jquery/dist/jquery.js')});
+        await page.addScriptTag({path: path.join(process.env.YII_VENDOR, 'yiisoft/yii2/assets/yii.activeForm.js')});
+    }
     await page.evaluate(async ({config, count}) => {
         window.module = await import('/bundle.js');
         window.editors = ['one', 'two'].slice(0, count).map(id => window.module.createEditor(`#${id}`, {
             fileManager: null, explorer: null, snippets: null,
-            shortcodes: {shortcodesUrl: '/api'}, buttons: ['source', 'undo', 'redo'],
+            shortcodes: {shortcodesUrl: '/api'}, buttons: ['source', 'fullsize', 'undo', 'redo'],
             sourceEditor: 'area', beautifyHTML: false, saveModeInStorage: false, history: {timeout: 10},
             ...config,
         }));
     }, {config, count});
 }
 async function ready() {
-    await page.waitForFunction(() => window.editors.every(e => !e.container.querySelector('.jodit-shortcodes-status') || e.container.querySelector('.jodit-shortcodes-status').hidden));
+    await page.locator('.jodit-shortcodes-status').first().waitFor({state: 'detached'});
 }
 try {
     await boot({}, 2);
     await ready();
     assert.equal(requests, 1, 'Запросы редакторов должны объединяться.');
+    await page.evaluate(() => window.editors[0].toggleFullSize(true));
+    assert.equal(await page.evaluate(() => getComputedStyle(window.editors[0].container).position), 'absolute');
+    await page.evaluate(() => window.editors[0].toggleFullSize(false));
+    if (process.env.YII_VENDOR) {
+        failure = true;
+        await boot({defaultMode: 2});
+        await page.waitForSelector('.jodit-shortcodes-status[role="alert"]');
+        await page.evaluate(() => {
+            const form = document.querySelector('#main');
+            form.submit = () => { window.savedHtml = document.querySelector('#one').value; };
+            window.jQuery(form).yiiActiveForm([], {});
+            window.jQuery(form).trigger('submit');
+        });
+        await page.waitForFunction(() => window.jQuery('#main').data('yiiActiveForm').submitting === false);
+        assert.equal(await page.evaluate(() => window.savedHtml), undefined);
+        failure = false;
+        await page.getByText('Повторить загрузку').click();
+        await ready();
+        await page.evaluate(() => {
+            const mirror = document.querySelector('.jodit-source__mirror');
+            mirror.value = '<img src="https://files.example.test/yii.jpg">';
+            mirror.dispatchEvent(new Event('input', {bubbles: true}));
+            window.jQuery('#main').trigger('submit');
+        });
+        await page.waitForFunction(() => window.savedHtml !== undefined);
+        assert.match(await page.evaluate(() => window.savedHtml), /%files%\/yii.jpg/);
+        await boot();
+        await ready();
+    }
     const codec = await page.evaluate(items => {
         const {ShortcodeCodec, parseShortcodes, mapSrcset, applyReplacements} = window.module;
         const c = new ShortcodeCodec(parseShortcodes({items}));
@@ -127,7 +160,7 @@ try {
     assert.equal(await page.evaluate(() => document.querySelector('#other').dispatchEvent(new Event('submit', {cancelable: true, bubbles: true}))), true);
     failure = false;
     await page.getByText('Повторить загрузку').first().click();
-    await page.waitForFunction(() => window.editors[0].container.querySelector('.jodit-shortcodes-status').hidden);
+    await page.waitForFunction(() => document.querySelectorAll('.jodit-shortcodes-status').length === 1);
     assert.equal(await page.evaluate(() => document.querySelector('#main').dispatchEvent(new Event('submit', {cancelable: true, bubbles: true}))), false, 'Второй редактор пока не восстановлен.');
     await page.getByText('Повторить загрузку').last().click();
     await ready();
@@ -159,6 +192,7 @@ try {
     }
     delay = 300;
     await boot();
+    assert.equal(await page.evaluate(() => window.editors[0].getReadOnly()), true);
     assert.equal(await page.evaluate(() => document.querySelector('#main').dispatchEvent(new Event('submit', {cancelable: true, bubbles: true}))), false);
     await page.evaluate(() => window.editors[0].destruct());
     await page.waitForTimeout(400);
